@@ -26,6 +26,7 @@ namespace tool_objectfs\local\store\digitalocean;
 
 defined('MOODLE_INTERNAL') || die();
 
+use tool_objectfs\local\manager;
 use tool_objectfs\local\store\s3\client as s3_client;
 
 class client extends s3_client {
@@ -88,6 +89,23 @@ class client extends s3_client {
             new \lang_string('settings:do:region_help', 'tool_objectfs'), '', $regionoptions));
 
         return $settings;
+    }
+
+    public function generate_presigned_url($contenthash, $headers = array())
+    {
+        $signedurl = parent::generate_presigned_url($contenthash, $headers);
+
+        $config = manager::get_objectfs_config();
+        if (isset($config->do_region) && !empty($config->do_region)
+            && isset($config->do_space) && !empty($config->do_space)) {
+            $url = 'https://' . $config->do_space . '.' . $config->do_region . '.digitaloceanspaces.com';
+            $cdn = 'https://' . $config->do_space . '.' . $config->do_region . '.cdn.digitaloceanspaces.com';
+            if (strpos($signedurl, $url) === 0) {
+                $signedurl = str_replace($url, $cdn, $signedurl);
+            }
+        }
+
+        return $signedurl;
     }
 
 }
